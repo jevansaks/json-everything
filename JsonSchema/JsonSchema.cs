@@ -1,16 +1,99 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 using Json.More;
 using Json.Pointer;
 
 namespace Json.Schema;
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(JsonSchema))]
+[JsonSerializable(typeof(AdditionalItemsKeyword))]
+[JsonSerializable(typeof(AdditionalPropertiesKeyword))]
+[JsonSerializable(typeof(AllOfKeyword))]
+[JsonSerializable(typeof(AnchorKeyword))]
+[JsonSerializable(typeof(AnyOfKeyword))]
+[JsonSerializable(typeof(CommentKeyword))]
+[JsonSerializable(typeof(ConstKeyword))]
+[JsonSerializable(typeof(ContainsKeyword))]
+[JsonSerializable(typeof(ContentEncodingKeyword))]
+[JsonSerializable(typeof(ContentMediaTypeKeyword))]
+[JsonSerializable(typeof(ContentSchemaKeyword))]
+[JsonSerializable(typeof(DefaultKeyword))]
+[JsonSerializable(typeof(DefinitionsKeyword))]
+[JsonSerializable(typeof(DefsKeyword))]
+[JsonSerializable(typeof(DependenciesKeyword))]
+[JsonSerializable(typeof(DependentRequiredKeyword))]
+[JsonSerializable(typeof(DependentSchemasKeyword))]
+[JsonSerializable(typeof(DeprecatedKeyword))]
+[JsonSerializable(typeof(DescriptionKeyword))]
+[JsonSerializable(typeof(DynamicAnchorKeyword))]
+[JsonSerializable(typeof(DynamicRefKeyword))]
+[JsonSerializable(typeof(ElseKeyword))]
+[JsonSerializable(typeof(EnumKeyword))]
+[JsonSerializable(typeof(ExamplesKeyword))]
+[JsonSerializable(typeof(ExclusiveMaximumKeyword))]
+[JsonSerializable(typeof(ExclusiveMinimumKeyword))]
+[JsonSerializable(typeof(FormatKeyword))]
+[JsonSerializable(typeof(IdKeyword))]
+[JsonSerializable(typeof(IfKeyword))]
+[JsonSerializable(typeof(ItemsKeyword))]
+[JsonSerializable(typeof(KeywordConstraint))]
+[JsonSerializable(typeof(KeywordEvaluation))]
+[JsonSerializable(typeof(MaxContainsKeyword))]
+[JsonSerializable(typeof(MaximumKeyword))]
+[JsonSerializable(typeof(MaxItemsKeyword))]
+[JsonSerializable(typeof(MaxLengthKeyword))]
+[JsonSerializable(typeof(MaxPropertiesKeyword))]
+[JsonSerializable(typeof(MinContainsKeyword))]
+[JsonSerializable(typeof(MinimumKeyword))]
+[JsonSerializable(typeof(MinItemsKeyword))]
+[JsonSerializable(typeof(MinLengthKeyword))]
+[JsonSerializable(typeof(MinPropertiesKeyword))]
+[JsonSerializable(typeof(MultipleOfKeyword))]
+[JsonSerializable(typeof(NotKeyword))]
+[JsonSerializable(typeof(OneOfKeyword))]
+[JsonSerializable(typeof(PatternKeyword))]
+[JsonSerializable(typeof(PatternPropertiesKeyword))]
+[JsonSerializable(typeof(PrefixItemsKeyword))]
+[JsonSerializable(typeof(PropertiesKeyword))]
+[JsonSerializable(typeof(PropertyDependenciesKeyword))]
+[JsonSerializable(typeof(PropertyNamesKeyword))]
+[JsonSerializable(typeof(ReadOnlyKeyword))]
+[JsonSerializable(typeof(RecursiveAnchorKeyword))]
+[JsonSerializable(typeof(RecursiveRefKeyword))]
+[JsonSerializable(typeof(RefKeyword))]
+[JsonSerializable(typeof(RequiredKeyword))]
+[JsonSerializable(typeof(SchemaKeyword))]
+[JsonSerializable(typeof(ThenKeyword))]
+[JsonSerializable(typeof(TitleKeyword))]
+[JsonSerializable(typeof(TypeKeyword))]
+[JsonSerializable(typeof(UnevaluatedItemsKeyword))]
+[JsonSerializable(typeof(UnevaluatedPropertiesKeyword))]
+[JsonSerializable(typeof(UniqueItemsKeyword))]
+[JsonSerializable(typeof(UnrecognizedKeyword))]
+[JsonSerializable(typeof(VocabularyKeyword))]
+[JsonSerializable(typeof(WriteOnlyKeyword))]
+
+[JsonSerializable(typeof(SchemaValueType))]
+[JsonSerializable(typeof(String[]))]
+[JsonSerializable(typeof(Dictionary<string, JsonSchema>))]
+[JsonSerializable(typeof(Dictionary<string, bool>))]
+[JsonSerializable(typeof(List<JsonSchema>))]
+[JsonSerializable(typeof(JsonArray))]
+[JsonSerializable(typeof(Dictionary<string, SchemaOrPropertyList>))]
+internal partial class JsonSchemaSerializationContext : JsonSerializerContext
+{
+
+}
 
 /// <summary>
 /// Represents a JSON Schema.
@@ -21,7 +104,11 @@ public class JsonSchema : IBaseDocument
 {
 	private const string _unknownKeywordsAnnotationKey = "$unknownKeywords";
 
+#if NET6_0_OR_GREATER
+	private static readonly HashSet<SpecVersion> _definedSpecVersions = new HashSet<SpecVersion>(Enum.GetValues<SpecVersion>());
+#else
 	private static readonly HashSet<SpecVersion> _definedSpecVersions = new HashSet<SpecVersion>(Enum.GetValues(typeof(SpecVersion)).Cast<SpecVersion>());
+#endif
 
 	private readonly Dictionary<string, IJsonSchemaKeyword>? _keywords;
 	private readonly List<(DynamicScope Scope, SchemaConstraint Constraint)> _constraints = new();
@@ -119,9 +206,31 @@ public class JsonSchema : IBaseDocument
 	/// <param name="options">Serializer options.</param>
 	/// <returns>A new <see cref="JsonSchema"/>.</returns>
 	/// <exception cref="JsonException">Could not deserialize a portion of the schema.</exception>
-	public static JsonSchema FromText(string jsonText, JsonSerializerOptions? options = null)
+	[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "<Pending>")]
+	[UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.", Justification = "<Pending>")]
+	public static JsonSchema FromText(string jsonText, JsonSerializerOptions? options)
 	{
+		if (options != null)
+		{
+			options.TypeInfoResolver = JsonSchemaSerializationContext.Default;
+		}
+		else
+		{
+			options = JsonSchemaSerializationContext.Default.JsonSchema.Options;
+		}
+
 		return JsonSerializer.Deserialize<JsonSchema>(jsonText, options)!;
+	}
+
+	/// <summary>
+	/// Deserializes a <see cref="JsonSchema"/> from text.
+	/// </summary>
+	/// <param name="jsonText">The text to parse.</param>
+	/// <returns>A new <see cref="JsonSchema"/>.</returns>
+	/// <exception cref="JsonException">Could not deserialize a portion of the schema.</exception>
+	public static JsonSchema FromText(string jsonText)
+	{
+		return JsonSerializer.Deserialize<JsonSchema>(jsonText, JsonSchemaSerializationContext.Default.JsonSchema)!;
 	}
 
 	/// <summary>
@@ -442,7 +551,11 @@ public class JsonSchema : IBaseDocument
 
 		if (desiredDraft != SpecVersion.Unspecified) return desiredDraft;
 
+#if NET6_0_OR_GREATER
+		var allDraftsArray = Enum.GetValues<SpecVersion>();
+#else
 		var allDraftsArray = Enum.GetValues(typeof(SpecVersion)).Cast<SpecVersion>().ToArray();
+#endif
 		var allDrafts = allDraftsArray.Aggregate(SpecVersion.Unspecified, (a, x) => a | x);
 		var commonDrafts = schema.Keywords!.Aggregate(allDrafts, (a, x) => a & x.VersionsSupported());
 		var candidates = allDraftsArray.Where(x => commonDrafts.HasFlag(x)).ToArray();
