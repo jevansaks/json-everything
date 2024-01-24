@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Json.Schema;
 
@@ -32,6 +33,10 @@ internal static class JsonSerializerOptionsExtensions
 
 	internal static object? Read(this JsonSerializerOptions options, ref Utf8JsonReader reader, Type arbitraryType)
 	{
+		//var typeinfo = options.GetTypeInfo(arbitraryType);
+		//typeinfo.Deserializea
+		//JsonSerializer.Deserialize(reader, arbitraryType, options);
+
 		var converter = ArbitraryDeserializer.GetConverter(arbitraryType);
 		return converter.Read(ref reader, options);
 	}

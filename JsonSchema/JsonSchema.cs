@@ -88,8 +88,10 @@ namespace Json.Schema;
 [JsonSerializable(typeof(Dictionary<string, JsonSchema>))]
 [JsonSerializable(typeof(Dictionary<string, bool>))]
 [JsonSerializable(typeof(List<JsonSchema>))]
+[JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(JsonArray))]
 [JsonSerializable(typeof(Dictionary<string, SchemaOrPropertyList>))]
+[JsonSerializable(typeof(int[]))]
 internal partial class JsonSchemaSerializationContext : JsonSerializerContext
 {
 
@@ -185,10 +187,33 @@ public class JsonSchema : IBaseDocument
 	/// <returns>A new <see cref="JsonSchema"/>.</returns>
 	/// <exception cref="JsonException">Could not deserialize a portion of the schema.</exception>
 	/// <remarks>The filename needs to not be URL-encoded as <see cref="Uri"/> attempts to encode it.</remarks>
-	public static JsonSchema FromFile(string fileName, JsonSerializerOptions? options = null)
+	[RequiresUnreferencedCode("TODO")]
+	[RequiresDynamicCode("TODO")]
+	public static JsonSchema FromFile(string fileName, JsonSerializerOptions? options)
 	{
 		var text = File.ReadAllText(fileName);
 		var schema = FromText(text, options);
+		var path = Path.GetFullPath(fileName);
+		// For some reason, full *nix file paths (which start with '/') don't work quite right when
+		// being prepended with 'file:///'.  It seems the '////' is interpreted as '//' and the
+		// first folder in the path is then interpreted as the host.  To account for this, we
+		// need to prepend with 'file://' instead.
+		var protocol = path.StartsWith("/") ? "file://" : "file:///";
+		schema.BaseUri = new Uri($"{protocol}{path}");
+		return schema;
+	}
+
+	/// <summary>
+	/// Loads text from a file and deserializes a <see cref="JsonSchema"/>.
+	/// </summary>
+	/// <param name="fileName">The filename to load, URL-decoded.</param>
+	/// <returns>A new <see cref="JsonSchema"/>.</returns>
+	/// <exception cref="JsonException">Could not deserialize a portion of the schema.</exception>
+	/// <remarks>The filename needs to not be URL-encoded as <see cref="Uri"/> attempts to encode it.</remarks>
+	public static JsonSchema FromFile(string fileName)
+	{
+		var text = File.ReadAllText(fileName);
+		var schema = FromText(text);
 		var path = Path.GetFullPath(fileName);
 		// For some reason, full *nix file paths (which start with '/') don't work quite right when
 		// being prepended with 'file:///'.  It seems the '////' is interpreted as '//' and the
@@ -206,19 +231,10 @@ public class JsonSchema : IBaseDocument
 	/// <param name="options">Serializer options.</param>
 	/// <returns>A new <see cref="JsonSchema"/>.</returns>
 	/// <exception cref="JsonException">Could not deserialize a portion of the schema.</exception>
-	[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "<Pending>")]
-	[UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.", Justification = "<Pending>")]
+	[RequiresUnreferencedCode("TODO")]
+	[RequiresDynamicCode("TODO")]
 	public static JsonSchema FromText(string jsonText, JsonSerializerOptions? options)
 	{
-		if (options != null)
-		{
-			options.TypeInfoResolver = JsonSchemaSerializationContext.Default;
-		}
-		else
-		{
-			options = JsonSchemaSerializationContext.Default.JsonSchema.Options;
-		}
-
 		return JsonSerializer.Deserialize<JsonSchema>(jsonText, options)!;
 	}
 
@@ -239,9 +255,23 @@ public class JsonSchema : IBaseDocument
 	/// <param name="source">A stream.</param>
 	/// <param name="options">Serializer options.</param>
 	/// <returns>A new <see cref="JsonSchema"/>.</returns>
+	[RequiresUnreferencedCode("TODO")]
+	[RequiresDynamicCode("TODO")]
 	public static ValueTask<JsonSchema> FromStream(Stream source, JsonSerializerOptions? options = null)
 	{
 		return JsonSerializer.DeserializeAsync<JsonSchema>(source, options)!;
+	}
+
+	/// <summary>
+	/// Deserializes a <see cref="JsonSchema"/> from a stream.
+	/// </summary>
+	/// <param name="source">A stream.</param>
+	/// <returns>A new <see cref="JsonSchema"/>.</returns>
+	[RequiresUnreferencedCode("TODO")]
+	[RequiresDynamicCode("TODO")]
+	public static ValueTask<JsonSchema> FromStream(Stream source)
+	{
+		return JsonSerializer.DeserializeAsync<JsonSchema>(source, JsonSchemaSerializationContext.Default.JsonSchema)!;
 	}
 
 	/// <summary>
@@ -789,6 +819,10 @@ public class JsonSchema : IBaseDocument
 /// </summary>
 public sealed class SchemaJsonConverter : JsonConverter<JsonSchema>
 {
+	public SchemaJsonConverter()
+	{
+
+	}
 	/// <summary>Reads and converts the JSON to type <see cref="JsonSchema"/>.</summary>
 	/// <param name="reader">The reader.</param>
 	/// <param name="typeToConvert">The type to convert.</param>

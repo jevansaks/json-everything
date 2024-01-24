@@ -112,6 +112,8 @@ public sealed class AdditionalItemsKeywordJsonConverter : JsonConverter<Addition
 	public override void Write(Utf8JsonWriter writer, AdditionalItemsKeyword value, JsonSerializerOptions options)
 	{
 		writer.WritePropertyName(AdditionalItemsKeyword.Name);
+#pragma warning disable IL2026, IL3050 
 		JsonSerializer.Serialize(writer, value.Schema, options);
+#pragma warning restore IL3050, IL3050 
 	}
 }
