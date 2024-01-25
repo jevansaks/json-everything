@@ -19,8 +19,7 @@ public static class JsonSerializerOptionsExtensions
 	/// <returns>An implementation of <see cref="JsonConverter<>"/> as determined by the provided options</returns>
 	public static JsonConverter<T> GetConverter<T>(this JsonSerializerOptions options)
 	{
-		var typeinfo = options.GetTypeInfo(typeof(T));
-		if (typeinfo is not null)
+		if (options.TryGetTypeInfo(typeof(T), out var typeinfo))
 		{
 			return (JsonConverter<T>)typeinfo.Converter;
 		}

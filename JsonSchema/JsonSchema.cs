@@ -90,6 +90,7 @@ namespace Json.Schema;
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(JsonArray))]
 [JsonSerializable(typeof(Dictionary<string, SchemaOrPropertyList>))]
+[JsonSerializable(typeof(Dictionary<string, List<string>>))]
 [JsonSerializable(typeof(int[]))]
 [JsonSourceGenerationOptions(WriteIndented = true)]
 internal partial class JsonSchemaSerializationContext : JsonSerializerContext
