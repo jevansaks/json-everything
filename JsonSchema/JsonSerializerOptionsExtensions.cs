@@ -38,6 +38,8 @@ internal static class JsonSerializerOptionsExtensions
 			return JsonSerializer.Deserialize(ref reader, typeinfo);
 		}
 
+		// TODO: make the above TypeInfo path support the SchemaRegistry things.
+
 		var converter = ArbitraryDeserializer.GetConverter(arbitraryType);
 		return converter.Read(ref reader, options);
 	}
