@@ -23,7 +23,7 @@ public class JsonNull
 	/// <summary>
 	/// Provides a static instance of this class wrapped in a <see cref="JsonNode"/>.
 	/// </summary>
-	public static JsonNode SignalNode { get; } = JsonValue.Create(new JsonNull())!;
+	public static JsonNode SignalNode { get; } = JsonValue.Create<JsonNull>(new JsonNull())!;
 
 	private JsonNull() { }
 }

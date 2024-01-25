@@ -14,7 +14,6 @@ using Json.Pointer;
 
 namespace Json.Schema;
 
-[JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(JsonSchema))]
 [JsonSerializable(typeof(AdditionalItemsKeyword))]
 [JsonSerializable(typeof(AdditionalPropertiesKeyword))]
@@ -92,6 +91,7 @@ namespace Json.Schema;
 [JsonSerializable(typeof(JsonArray))]
 [JsonSerializable(typeof(Dictionary<string, SchemaOrPropertyList>))]
 [JsonSerializable(typeof(int[]))]
+[JsonSourceGenerationOptions(WriteIndented = true)]
 internal partial class JsonSchemaSerializationContext : JsonSerializerContext
 {
 

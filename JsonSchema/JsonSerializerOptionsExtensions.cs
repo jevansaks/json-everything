@@ -33,9 +33,11 @@ internal static class JsonSerializerOptionsExtensions
 
 	internal static object? Read(this JsonSerializerOptions options, ref Utf8JsonReader reader, Type arbitraryType)
 	{
-		//var typeinfo = options.GetTypeInfo(arbitraryType);
-		//typeinfo.Deserializea
-		//JsonSerializer.Deserialize(reader, arbitraryType, options);
+		var typeinfo = options.GetTypeInfo(arbitraryType);
+		if (typeinfo != null)
+		{
+			return JsonSerializer.Deserialize(ref reader, typeinfo);
+		}
 
 		var converter = ArbitraryDeserializer.GetConverter(arbitraryType);
 		return converter.Read(ref reader, options);

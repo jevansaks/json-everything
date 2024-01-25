@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -18,6 +19,12 @@ public static class JsonSerializerOptionsExtensions
 	/// <returns>An implementation of <see cref="JsonConverter<>"/> as determined by the provided options</returns>
 	public static JsonConverter<T> GetConverter<T>(this JsonSerializerOptions options)
 	{
+		var typeinfo = options.GetTypeInfo(typeof(T));
+		if (typeinfo is not null)
+		{
+			return (JsonConverter<T>)typeinfo.Converter;
+		}
+
 		return (JsonConverter<T>)options.GetConverter(typeof(T));
 	}
 
