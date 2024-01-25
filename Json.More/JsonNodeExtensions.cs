@@ -284,8 +284,6 @@ public static class JsonNodeExtensions
 	/// </summary>
 	/// <param name="nodes">The nodes.</param>
 	/// <returns>A JSON array.</returns>
-	[RequiresDynamicCode("Calls Json.More.JsonNodeExtensions.Copy(IEnumerable<JsonNode>)")]
-	[RequiresUnreferencedCode("Calls Json.More.JsonNodeExtensions.Copy(IEnumerable<JsonNode>)")]
 	public static JsonArray ToJsonArray(this IEnumerable<JsonNode?> nodes)
 	{
 #if NET8_0_OR_GREATER
