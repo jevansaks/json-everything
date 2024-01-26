@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 #pragma warning disable CS1570
 
@@ -109,13 +110,18 @@ public class LessThanEqualRule : Rule
 		return string.Compare(stringA, stringB, StringComparison.Ordinal) <= 0 &&
 		       string.Compare(stringB, stringC, StringComparison.Ordinal) <= 0;
 	}
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.LessThanEqualRule;
 }
 
 internal class LessThanEqualRuleJsonConverter : JsonConverter<LessThanEqualRule>
 {
 	public override LessThanEqualRule? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var parameters = JsonSerializer.Deserialize<Rule[]>(ref reader, options);
+		var parameters = JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.RuleArray);
 
 		if (parameters is not ({ Length: 2 } or { Length: 3 }))
 			throw new JsonException("The <= rule needs an array with either 2 or 3 parameters.");

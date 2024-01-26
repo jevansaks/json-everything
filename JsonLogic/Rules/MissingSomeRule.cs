@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 using Json.Pointer;
 
@@ -81,19 +82,18 @@ public class MissingSomeRule : Rule
 
 		return new JsonArray();
 	}
-}
 
-[JsonSerializable(typeof(Rule[]))]
-internal partial class RuleJsonSerializerContext : JsonSerializerContext
-{
-
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.MissingSomeRule;
 }
 
 internal class MissingSomeRuleJsonConverter : JsonConverter<MissingSomeRule>
 {
 	public override MissingSomeRule? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var parameters = JsonSerializer.Deserialize(ref reader, RuleJsonSerializerContext.Default.RuleArray);
+		var parameters = JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.RuleArray);
 
 		if (parameters is not { Length: 2 })
 			throw new JsonException("The missing_some rule needs an array with 2 parameters.");

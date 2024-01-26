@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 
 namespace Json.Logic.Rules;
@@ -36,6 +37,11 @@ public class LiteralRule : Rule
 	{
 		return Value;
 	}
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.LiteralRule;
 }
 
 internal class LiteralRuleJsonConverter : JsonConverter<LiteralRule>
@@ -48,6 +54,10 @@ internal class LiteralRuleJsonConverter : JsonConverter<LiteralRule>
 
 	public override void Write(Utf8JsonWriter writer, LiteralRule value, JsonSerializerOptions options)
 	{
+#if NET6_0_OR_GREATER
+		JsonSerializer.Serialize(writer, value.Value, JsonLogicSerializerContext.Default.LiteralRule);
+#else
 		JsonSerializer.Serialize(writer, value.Value, options);
+#endif
 	}
 }

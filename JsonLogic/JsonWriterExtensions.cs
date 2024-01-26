@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Json.Logic;
 
@@ -22,7 +24,11 @@ public static class JsonWriterExtensions
 			writer.WriteNullValue();
 			return;
 		}
+#if NET6_0_OR_GREATER
+		JsonSerializer.Serialize(writer, rule, rule.TypeInfo);
+#else
 		JsonSerializer.Serialize(writer, rule, rule.GetType(), options);
+#endif
 	}
 
 	/// <summary>

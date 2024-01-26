@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Json.Logic.Rules;
 
@@ -54,17 +55,22 @@ public class CatRule : Rule
 
 		return result;
 	}
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.CatRule;
 }
 
 internal class CatRuleJsonConverter : JsonConverter<CatRule>
 {
 	public override CatRule? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonSerializer.Deserialize<JsonNode?>(ref reader, options);
+		var node = JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.JsonNode);
 
 		var parameters = node is JsonArray
-			? node.Deserialize<Rule[]>()
-			: new[] { node.Deserialize<Rule>()! };
+			? node.Deserialize(JsonLogicSerializerContext.Default.RuleArray)
+			: new[] { node.Deserialize(JsonLogicSerializerContext.Default.Rule)! };
 
 		if (parameters == null || parameters.Length == 0)
 			throw new JsonException("The cat rule needs an array of parameters.");

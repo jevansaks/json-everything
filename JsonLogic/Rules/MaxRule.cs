@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 
 // ReSharper disable PossibleMultipleEnumeration
@@ -52,13 +53,18 @@ public class MaxRule : Rule
 
 		return items.Max(i => i.Value!.Value);
 	}
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.MaxRule;
 }
 
 internal class MaxRuleJsonConverter : JsonConverter<MaxRule>
 {
 	public override MaxRule? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var parameters = JsonSerializer.Deserialize<Rule[]>(ref reader, options);
+		var parameters = JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.RuleArray);
 
 		if (parameters == null || parameters.Length == 0)
 			throw new JsonException("The max rule needs an array of parameters.");

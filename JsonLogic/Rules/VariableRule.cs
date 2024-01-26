@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.Pointer;
 
 namespace Json.Logic.Rules;
@@ -53,17 +54,22 @@ public class VariableRule : Rule
 
 		return DefaultValue?.Apply(data, contextData) ?? null;
 	}
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.VariableRule;
 }
 
 internal class VariableRuleJsonConverter : JsonConverter<VariableRule>
 {
 	public override VariableRule? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonSerializer.Deserialize<JsonNode?>(ref reader, options);
+		var node = JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.JsonNode);
 
 		var parameters = node is JsonArray
-			? node.Deserialize<Rule[]>()
-			: new[] { node.Deserialize<Rule>()! };
+			? node.Deserialize(JsonLogicSerializerContext.Default.RuleArray)
+			: new[] { node.Deserialize<Rule>(JsonLogicSerializerContext.Default.Rule)! };
 
 		if (parameters is not ({ Length: 0 } or { Length: 1 } or { Length: 2 }))
 			throw new JsonException("The var rule needs an array with 0, 1, or 2 parameters.");

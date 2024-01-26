@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.Logic.Rules;
 
 namespace Json.Logic;
@@ -67,6 +68,11 @@ public abstract class Rule
 	/// </summary>
 	/// <param name="value">The value.</param>
 	public static implicit operator Rule(double value) => new LiteralRule(value);
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public abstract JsonTypeInfo TypeInfo { get; }// => null;
 }
 
 /// <summary>
@@ -93,7 +99,7 @@ public class LogicComponentConverter : JsonConverter<Rule>
 	/// <returns>The converted value.</returns>
 	public override Rule Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonSerializer.Deserialize<JsonNode?>(ref reader, options);
+		var node = JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.JsonNode);
 		Rule rule;
 
 		if (node is JsonObject)
@@ -106,18 +112,38 @@ public class LogicComponentConverter : JsonConverter<Rule>
 			{
 				var (op, args) = data.First();
 
-				var ruleType = RuleRegistry.GetRule(op);
-				if (ruleType == null)
-					throw new JsonException($"Cannot identify rule for {op}");
+#if NET6_0_OR_GREATER // JsonSerializer.Deserialize overloads that we use here aren't supported in STJ 6.x that the NetStandard build uses.
+				var ruleTypeInfo = RuleRegistry.GetRuleTypeInfo(op);
+				if (ruleTypeInfo != null)
+				{
+					rule = args is null
+						? (Rule)JsonSerializer.Deserialize("[]", ruleTypeInfo)!
+						: (Rule)args.Deserialize(ruleTypeInfo)!;
+				}
+				else
+#endif
+				{
+					if (RuleRegistry.RequiresDynamicSerialization)
+					{
+						var ruleType = RuleRegistry.GetRule(op) ??
+							throw new JsonException($"Cannot identify rule for {op}");
 
-				rule = args is null
-					? (Rule)JsonSerializer.Deserialize("[]", ruleType, options)!
-					: (Rule)args.Deserialize(ruleType, options)!;
+#pragma warning disable IL2026, IL3050 // This is only allowed if the caller went through the dynamic registration
+						rule = args is null
+							? (Rule)JsonSerializer.Deserialize("[]", ruleType, options)!
+							: (Rule)args.Deserialize(ruleType, options)!;
+#pragma warning restore IL2026, IL3050
+					}
+					else
+					{
+						throw new JsonException($"Cannot identify rule for {op} from TypeInfo registry");
+					}
+				}
 			}
 		}
 		else if (node is JsonArray)
 		{
-			var data = node.Deserialize<List<Rule>>(options)!;
+			var data = node.Deserialize(JsonLogicSerializerContext.Default.ListRule)!;
 			rule = new RuleCollection(data);
 		}
 		else
@@ -136,7 +162,8 @@ public class LogicComponentConverter : JsonConverter<Rule>
 	{
 		if (value.Source != null)
 		{
-			JsonSerializer.Serialize(writer, value.Source, options);
+			JsonSerializer.Serialize(writer, value.Source, JsonLogicSerializerContext.Default.JsonNode);
+			//JsonSerializer.Serialize(writer, value.Source, options);
 			return;
 		}
 
@@ -163,9 +190,9 @@ internal class ArgumentCollectionConverter : JsonConverter<ArgumentCollection>
 	public override ArgumentCollection Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		if (reader.TokenType == JsonTokenType.StartArray)
-			return new ArgumentCollection(JsonSerializer.Deserialize<List<Rule>>(ref reader, options)!);
+			return new ArgumentCollection(JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.ListRule)!);
 
-		return new ArgumentCollection(JsonSerializer.Deserialize<Rule>(ref reader, options));
+		return new ArgumentCollection(JsonSerializer.Deserialize<Rule>(ref reader, JsonLogicSerializerContext.Default.Rule));
 	}
 
 	public override void Write(Utf8JsonWriter writer, ArgumentCollection value, JsonSerializerOptions options)

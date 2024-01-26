@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 
 namespace Json.Logic.Rules;
@@ -39,6 +40,11 @@ public class RuleCollection : Rule
 	{
 		return Rules.Select(x => x.Apply(data, contextData)).ToJsonArray();
 	}
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.RuleCollection;
 }
 
 internal class RuleCollectionJsonConverter : JsonConverter<RuleCollection>

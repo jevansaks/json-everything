@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 
 namespace Json.Logic.Rules;
@@ -46,13 +47,18 @@ public class StrictEqualsRule : Rule
 	{
 		return A.Apply(data, contextData).IsEquivalentTo(B.Apply(data, contextData));
 	}
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.StrictEqualsRule;
 }
 
 internal class StrictEqualsRuleJsonConverter : JsonConverter<StrictEqualsRule>
 {
 	public override StrictEqualsRule? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var parameters = JsonSerializer.Deserialize<Rule[]>(ref reader, options);
+		var parameters = JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.RuleArray);
 
 		if (parameters is not { Length: 2 })
 			throw new JsonException("The === rule needs an array with 2 parameters.");

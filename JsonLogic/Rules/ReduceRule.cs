@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 
 namespace Json.Logic.Rules;
@@ -11,12 +13,18 @@ namespace Json.Logic.Rules;
 /// </summary>
 [Operator("reduce")]
 [JsonConverter(typeof(ReduceRuleJsonConverter))]
-public class ReduceRule : Rule
+public partial class ReduceRule : Rule
 {
 	private class Intermediary
 	{
 		public JsonNode? Current { get; set; }
 		public JsonNode? Accumulator { get; set; }
+	}
+
+	[JsonSerializable(typeof(Intermediary))]
+	private partial class IntermediarySerializerContext : JsonSerializerContext
+	{
+
 	}
 
 	private static readonly JsonSerializerOptions _options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -70,7 +78,7 @@ public class ReduceRule : Rule
 				Current = element,
 				Accumulator = accumulator
 			};
-			var item = JsonSerializer.SerializeToNode(intermediary, _options);
+			var item = JsonSerializer.SerializeToNode(intermediary, IntermediarySerializerContext.Default.Intermediary);
 
 			accumulator = Rule.Apply(data, item);
 
@@ -79,13 +87,18 @@ public class ReduceRule : Rule
 
 		return accumulator;
 	}
+
+	/// <summary>
+	/// Returns the TypeInfo that can serialize this Rule type.
+	/// </summary>
+	public override JsonTypeInfo TypeInfo => JsonLogicSerializerContext.Default.ReduceRule;
 }
 
 internal class ReduceRuleJsonConverter : JsonConverter<ReduceRule>
 {
 	public override ReduceRule? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var parameters = JsonSerializer.Deserialize<Rule[]>(ref reader, options);
+		var parameters = JsonSerializer.Deserialize(ref reader, JsonLogicSerializerContext.Default.RuleArray);
 
 		if (parameters is not { Length: 3 })
 			throw new JsonException("The reduce rule needs an array with 3 parameters.");
