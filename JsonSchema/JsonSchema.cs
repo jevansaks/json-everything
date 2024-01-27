@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -23,7 +25,7 @@ public class JsonSchema : IBaseDocument
 {
 	private const string _unknownKeywordsAnnotationKey = "$unknownKeywords";
 
-	private static readonly HashSet<SpecVersion> _definedSpecVersions = [..GetSpecVersions()];
+	private static readonly HashSet<SpecVersion> _definedSpecVersions = [.. GetSpecVersions()];
 
 	private static SpecVersion[] GetSpecVersions() =>
 #if NET6_0_OR_GREATER
@@ -90,12 +92,96 @@ public class JsonSchema : IBaseDocument
 	internal Dictionary<string, (JsonSchema Schema, bool IsDynamic)> Anchors { get; } = [];
 	internal JsonSchema? RecursiveAnchor { get; set; }
 
+	internal static JsonSerializerOptions SerializerOptions
+	{
+		get
+		{
+			lock (_serializerOptionsLock)
+			{
+				EnsureTypeInfoResolver();
+				_serializerOptions ??= new JsonSerializerOptions
+				{
+#if NET8_0_OR_GREATER
+					TypeInfoResolver = _typeInfoResolver
+#endif
+				};
+
+				return _serializerOptions!;
+			}
+		}
+	}
+
+	internal static JsonSerializerOptions SerializerOptionsUnsafeRelaxedJsonEscaping
+	{
+		get
+		{
+			lock (_serializerOptionsLock)
+			{
+				EnsureTypeInfoResolver();
+				_serializerOptionsUnsafeRelaxedJsonEscaping ??= new JsonSerializerOptions
+				{
+					Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+#if NET8_0_OR_GREATER
+					TypeInfoResolver = _typeInfoResolver
+#endif
+				};
+
+				return _serializerOptionsUnsafeRelaxedJsonEscaping!;
+			}
+		}
+	}
+
+	static JsonSchema()
+	{
+		EnsureTypeInfoResolver();
+	}
+
+	internal static void InvalidateTypeInfoResolver()
+	{
+		lock (_serializerOptionsLock)
+		{
+			_serializerOptions = null;
+			_serializerOptionsUnsafeRelaxedJsonEscaping = null;
+#if NET8_0_OR_GREATER
+			_typeInfoResolver = null;
+#endif
+		}
+	}
+
+	private static void EnsureTypeInfoResolver()
+	{
+		lock (_serializerOptionsLock)
+		{
+#if NET8_0_OR_GREATER
+			var typeInfoResolverList = SchemaKeywordRegistry.ExtraTypeInfoResolvers.Append(JsonSchemaSerializerContext.Default);
+			_typeInfoResolver = JsonTypeInfoResolver.Combine(typeInfoResolverList.ToArray());
+#endif
+		}
+	}
+
+	private static JsonSerializerOptions? _serializerOptions;
+	private static JsonSerializerOptions? _serializerOptionsUnsafeRelaxedJsonEscaping;
+	private static object _serializerOptionsLock = new();
+
+
 #if NET8_0_OR_GREATER
 	/// <summary>
 	/// A TypeInfoResolver that can be used for serializing JsonSchema objects. Add to your custom
 	/// JsonSerializerOptions's TypeInfoResolver or TypeInfoResolveChain.
 	/// </summary>
-	public static IJsonTypeInfoResolver TypeInfoResolver => JsonSchemaSerializerContext.Default;
+	public static IJsonTypeInfoResolver TypeInfoResolver
+	{
+		get
+		{
+			lock (_serializerOptionsLock)
+			{
+				EnsureTypeInfoResolver();
+				return _typeInfoResolver!;
+			}
+		}
+	}
+
+	private static IJsonTypeInfoResolver? _typeInfoResolver;
 #endif
 
 	private JsonSchema(bool value)
@@ -174,7 +260,9 @@ public class JsonSchema : IBaseDocument
 	/// <exception cref="JsonException">Could not deserialize a portion of the schema.</exception>
 	public static JsonSchema FromText(string jsonText)
 	{
-		return JsonSerializer.Deserialize<JsonSchema>(jsonText, JsonSchemaSerializerContext.Default.JsonSchema)!;
+#pragma warning disable IL2026, IL3050 // Deserialize is safe in AOT if the JsonSerializerOptions come from the source generator.
+		return JsonSerializer.Deserialize<JsonSchema>(jsonText, SerializerOptions)!;
+#pragma warning restore IL2026, IL3050
 	}
 
 	/// <summary>
@@ -444,7 +532,9 @@ public class JsonSchema : IBaseDocument
 
 			foreach (var keyword in unrecognizedButSupported)
 			{
-				var jsonText = JsonSerializer.Serialize((object) keyword);
+#pragma warning disable IL2026, IL3050 // Deserialize is safe in AOT if the JsonSerializerOptions come from the source generator.
+				var jsonText = JsonSerializer.Serialize((object) keyword, keyword.GetType(), SerializerOptions);
+#pragma warning restore IL2026, IL3050
 				var json = JsonNode.Parse(jsonText);
 				var keywordConstraint = KeywordConstraint.SimpleAnnotation(keyword.Keyword(), json);
 				localConstraints.Add(keywordConstraint);
@@ -664,7 +754,7 @@ public class JsonSchema : IBaseDocument
 					newResolvable = k;
 					break;
 				default: // non-applicator keyword
-					var serialized = JsonSerializer.Serialize(localResolvable);
+					var serialized = JsonSerializer.Serialize(localResolvable, localResolvable.GetType(), SerializerOptions);
 					var json = JsonNode.Parse(serialized);
 					var newPointer = JsonPointer.Create(pointer.Segments.Skip(i));
 					i += newPointer.Segments.Length - 1;
@@ -774,11 +864,8 @@ public sealed class SchemaJsonConverter : Json.More.AotCompatibleJsonConverter<J
 						implementation = SchemaKeywordRegistry.GetNullValuedKeyword(keywordType) ??
 										 throw new InvalidOperationException($"No null instance registered for keyword `{keyword}`");
 					else
-					{
-						SchemaKeywordRegistry.TryGetTypeInfo(keywordType, out var keywordTypeInfo);
-						implementation = options.Read(ref reader, keywordType, keywordTypeInfo) as IJsonSchemaKeyword ??
+						implementation = options.Read(ref reader, keywordType) as IJsonSchemaKeyword ??
 								throw new InvalidOperationException($"Could not deserialize expected keyword `{keyword}`");
-					}
 					keywords.Add(implementation);
 					break;
 				case JsonTokenType.EndObject:
