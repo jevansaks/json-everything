@@ -159,7 +159,9 @@ internal class PatchOperationJsonConverter : JsonConverter<PatchOperation>
 
 	public override PatchOperation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var model = JsonSerializer.Deserialize(ref reader, PatchSerializerContext.Default.Model)!;
+#pragma warning disable IL2026, IL3050 // We guarantee the JsonSerializerOptions contains the types we need.
+		var model = JsonSerializer.Deserialize<Model>(ref reader, options)!;
+#pragma warning restore IL2026, IL3050
 
 		if (model.Path == null)
 			throw new JsonException($"`{model.Op}` operation requires `path`");
@@ -196,37 +198,38 @@ internal class PatchOperationJsonConverter : JsonConverter<PatchOperation>
 
 	public override void Write(Utf8JsonWriter writer, PatchOperation value, JsonSerializerOptions options)
 	{
+#pragma warning disable IL2026, IL3050 // We guarantee the JsonSerializerOptions contains the types we need.
 		writer.WriteStartObject();
 
 		writer.WritePropertyName("op");
-		JsonSerializer.Serialize(writer, value.Op, PatchSerializerContext.Default.OperationType);
+		JsonSerializer.Serialize(writer, value.Op, options);
 
 		writer.WritePropertyName("path");
-		JsonSerializer.Serialize(writer, value.Path, PatchSerializerContext.Default.JsonPointer);
+		JsonSerializer.Serialize(writer, value.Path, options);
 
 		switch (value.Op)
 		{
 			case OperationType.Add:
 				writer.WritePropertyName("value");
-				JsonSerializer.Serialize(writer, value.Value, PatchSerializerContext.Default.JsonNode!);
+				JsonSerializer.Serialize(writer, value.Value, options);
 				break;
 			case OperationType.Remove:
 				break;
 			case OperationType.Replace:
 				writer.WritePropertyName("value");
-				JsonSerializer.Serialize(writer, value.Value, PatchSerializerContext.Default.JsonNode!);
+				JsonSerializer.Serialize(writer, value.Value, options);
 				break;
 			case OperationType.Move:
 				writer.WritePropertyName("from");
-				JsonSerializer.Serialize(writer, value.From, PatchSerializerContext.Default.JsonPointer);
+				JsonSerializer.Serialize(writer, value.From, options);
 				break;
 			case OperationType.Copy:
 				writer.WritePropertyName("from");
-				JsonSerializer.Serialize(writer, value.From, PatchSerializerContext.Default.JsonPointer);
+				JsonSerializer.Serialize(writer, value.From, options);
 				break;
 			case OperationType.Test:
 				writer.WritePropertyName("value");
-				JsonSerializer.Serialize(writer, value.Value, PatchSerializerContext.Default.JsonNode!);
+				JsonSerializer.Serialize(writer, value.Value, options);
 				break;
 			case OperationType.Unknown:
 			default:
@@ -234,5 +237,6 @@ internal class PatchOperationJsonConverter : JsonConverter<PatchOperation>
 		}
 
 		writer.WriteEndObject();
+#pragma warning restore IL2026, IL3050
 	}
 }

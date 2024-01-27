@@ -104,7 +104,9 @@ public class PatchJsonConverter : AotCompatibleJsonConverter<JsonPatch>
 	/// <returns>The converted value.</returns>
 	public override JsonPatch Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var operations = JsonSerializer.Deserialize(ref reader, PatchSerializerContext.Default.ListPatchOperation)!;
+#pragma warning disable IL2026, IL3050 // We guarantee the JsonSerializerOptions contains the types we need.
+		var operations = JsonSerializer.Deserialize<List<PatchOperation>>(ref reader, options)!;
+#pragma warning restore IL2026, IL3050
 
 		return new JsonPatch(operations);
 	}

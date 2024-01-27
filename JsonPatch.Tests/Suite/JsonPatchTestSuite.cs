@@ -39,11 +39,14 @@ public class JsonPatchTestSuite
 
 	static JsonPatchTestSuite()
 	{
-		_options = new JsonSerializerOptions
+		_options = new JsonSerializerOptions(JsonPatchTestSerializerContext.Default.Options)
 		{
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-			WriteIndented = true
+			WriteIndented = true,
 		};
+#if NET8_0_OR_GREATER
+		_options.TypeInfoResolverChain.Add(JsonPatch.JsonTypeResolver);
+#endif
 	}
 
 	[TestCaseSource(nameof(TestData))]

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -86,7 +87,7 @@ public class JsonPatchTest
 
 public class JsonPatchTestJsonConverter : JsonConverter<JsonPatchTest?>
 {
-	private class Model
+	internal class Model
 	{
 		public JsonNode? Doc { get; set; }
 		public JsonElement Expected { get; set; }
@@ -161,3 +162,9 @@ public class JsonPatchTestJsonConverter : JsonConverter<JsonPatchTest?>
 		writer.WriteEndObject();
 	}
 }
+
+[JsonSerializable(typeof(JsonPatchTest))]
+[JsonSerializable(typeof(List<JsonPatchTest>))]
+[JsonSerializable(typeof(JsonPatchTestJsonConverter.Model))]
+
+internal partial class JsonPatchTestSerializerContext : JsonSerializerContext;

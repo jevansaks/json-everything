@@ -100,7 +100,7 @@ public class PatchExtensionTests
 			Attributes = JsonDocument.Parse("[{\"test\":\"test123\"},{\"test\":\"test32132\"},{\"test1\":\"test321\"},{\"test\":[1,2,3]},{\"test\":[1,2,3]}]").RootElement
 		};
 		var patchExpectedStr = "[{\"op\":\"add\",\"path\":\"/Attributes\",\"value\":[{\"test\":\"test123\"},{\"test\":\"test32132\"},{\"test1\":\"test321\"},{\"test\":[1,2,3]},{\"test\":[1,2,3]}]}]";
-		var options = new JsonSerializerOptions();
+		var options = new JsonSerializerOptions(TestJsonContext.Default.Options);
 #if NET8_0_OR_GREATER
 		options.TypeInfoResolverChain.Add(JsonPatch.JsonTypeResolver);
 #endif
@@ -353,7 +353,12 @@ public class PatchExtensionTests
 
 		var patch = initial.CreatePatch(expected);
 		// use source generated json serializer context
-		var patchJson = JsonSerializer.Serialize(patch, TestJsonContext.Default.JsonPatch);
+		var options = new JsonSerializerOptions(TestJsonContext.Default.Options);
+#if NET8_0_OR_GREATER
+		options.TypeInfoResolverChain.Add(JsonPatch.JsonTypeResolver);
+#endif
+
+		var patchJson = JsonSerializer.Serialize(patch, options);
 
 		Assert.AreEqual(patchExpected, patchJson);
 	}
