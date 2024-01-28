@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Json.Patch.Tests.Suite;
 using NUnit.Framework;
 // ReSharper disable UnusedAutoPropertyAccessor.Local
 
@@ -100,12 +101,8 @@ public class PatchExtensionTests
 			Attributes = JsonDocument.Parse("[{\"test\":\"test123\"},{\"test\":\"test32132\"},{\"test1\":\"test321\"},{\"test\":[1,2,3]},{\"test\":[1,2,3]}]").RootElement
 		};
 		var patchExpectedStr = "[{\"op\":\"add\",\"path\":\"/Attributes\",\"value\":[{\"test\":\"test123\"},{\"test\":\"test32132\"},{\"test1\":\"test321\"},{\"test\":[1,2,3]},{\"test\":[1,2,3]}]}]";
-		var options = new JsonSerializerOptions(TestJsonContext.Default.Options);
-#if NET8_0_OR_GREATER
-		options.TypeInfoResolverChain.Add(JsonPatch.JsonTypeResolver);
-#endif
-		var expected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr, options)!;
-		var patch = initial.CreatePatch(target, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
+		var expected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr, JsonPatchTestSuite.DefaultOptions)!;
+		var patch = initial.CreatePatch(target, new JsonSerializerOptions(JsonPatchTestSuite.DefaultOptions) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
 
 		VerifyPatches(expected, patch);
 	}
@@ -154,7 +151,7 @@ public class PatchExtensionTests
 		var initial = JsonDocument.Parse("[1,2,3]");
 		var expected = JsonDocument.Parse("[1,2,3,4]");
 		var patchExpectedStr = "[{\"op\":\"add\",\"path\":\"/3\",\"value\":4}]";
-		var patchExpected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr);
+		var patchExpected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr, JsonPatchTestSuite.DefaultOptions);
 		var patch = initial.CreatePatch(expected);
 
 		VerifyPatches(patchExpected!, patch);
@@ -166,7 +163,7 @@ public class PatchExtensionTests
 		var initial = JsonDocument.Parse("[1,2,3]");
 		var expected = JsonDocument.Parse("[1,2]");
 		var patchExpectedStr = "[{\"op\":\"remove\",\"path\":\"/2\"}]";
-		var patchExpected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr);
+		var patchExpected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr, JsonPatchTestSuite.DefaultOptions);
 		var patch = initial.CreatePatch(expected);
 
 		VerifyPatches(patchExpected!, patch);
@@ -179,7 +176,7 @@ public class PatchExtensionTests
 		var expected = JsonDocument.Parse("[1,2,1]");
 		var patch = initial.CreatePatch(expected);
 		var patchExpectedStr = "[{\"op\":\"replace\",\"path\":\"/2\",\"value\":1}]";
-		var patchExpected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr);
+		var patchExpected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr, JsonPatchTestSuite.DefaultOptions);
 
 		VerifyPatches(patchExpected!, patch);
 	}
@@ -235,7 +232,7 @@ public class PatchExtensionTests
 			"{\"op\":\"replace\",\"path\":\"/Attributes/3/test/1\",\"value\":1}," +
 			"{\"op\":\"remove\",\"path\":\"/Attributes/0/test\"}," +
 			"{\"op\":\"add\",\"path\":\"/Attributes/0/test1\",\"value\":\"test123\"}]";
-		var patchExpected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr);
+		var patchExpected = JsonSerializer.Deserialize<JsonPatch>(patchExpectedStr, JsonPatchTestSuite.DefaultOptions);
 
 		var patchBackExpectedStr =
 			"[{\"op\":\"replace\",\"path\":\"/Id\",\"value\":\"aa7daced-c9fa-489b-9bc1-540b21d277a1\"}," +
@@ -248,7 +245,7 @@ public class PatchExtensionTests
 			"{\"op\":\"remove\",\"path\":\"/Attributes/0/test1\"}," +
 			"{\"op\":\"add\",\"path\":\"/Attributes/0/test\",\"value\":\"test123\"}," +
 			"{\"op\":\"replace\",\"path\":\"/Attributes/3/test/1\",\"value\":2},{\"op\":\"add\",\"path\":\"/Attributes/4\",\"value\":{\"test\":[1,2,3]}}]";
-		var patchBackExpected = JsonSerializer.Deserialize<JsonPatch>(patchBackExpectedStr);
+		var patchBackExpected = JsonSerializer.Deserialize<JsonPatch>(patchBackExpectedStr, JsonPatchTestSuite.DefaultOptions);
 
 		var patch = initial.CreatePatch(expected, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
 		var patchBack = expected.CreatePatch(initial, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
@@ -352,13 +349,7 @@ public class PatchExtensionTests
 			"{\"op\":\"add\",\"path\":\"/Attributes/4\",\"value\":{\"test\":[1,2,3]}}]";
 
 		var patch = initial.CreatePatch(expected);
-		// use source generated json serializer context
-		var options = new JsonSerializerOptions(TestJsonContext.Default.Options);
-#if NET8_0_OR_GREATER
-		options.TypeInfoResolverChain.Add(JsonPatch.JsonTypeResolver);
-#endif
-
-		var patchJson = JsonSerializer.Serialize(patch, options);
+		var patchJson = JsonSerializer.Serialize(patch, JsonPatchTestSuite.DefaultOptions);
 
 		Assert.AreEqual(patchExpected, patchJson);
 	}
@@ -377,11 +368,5 @@ public class PatchExtensionTests
 	}
 
 
-
-}
-
-[JsonSerializable(typeof(JsonPatch))]
-public partial class TestJsonContext : JsonSerializerContext
-{
 
 }

@@ -123,7 +123,12 @@ public class JsonPatchTestJsonConverter : JsonConverter<JsonPatchTest?>
 				};
 			}
 
-			Console.WriteLine(JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true }));
+			var indentedOptions = new JsonSerializerOptions(options) { WriteIndented = true };
+#if NET8_0_OR_GREATER
+			indentedOptions.TypeInfoResolverChain.Add(JsonSchema.TypeInfoResolver);
+#endif
+
+			Console.WriteLine(JsonSerializer.Serialize(results, indentedOptions));
 			return null;
 		}
 		catch (Exception e) when(e is JsonException or ArgumentException)
@@ -166,5 +171,5 @@ public class JsonPatchTestJsonConverter : JsonConverter<JsonPatchTest?>
 [JsonSerializable(typeof(JsonPatchTest))]
 [JsonSerializable(typeof(List<JsonPatchTest>))]
 [JsonSerializable(typeof(JsonPatchTestJsonConverter.Model))]
-
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class JsonPatchTestSerializerContext : JsonSerializerContext;

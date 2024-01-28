@@ -15,6 +15,7 @@ public class JsonPatchTestSuite
 {
 	private const string _testFolder = @"../../../../ref-repos/json-patch-tests";
 	private static readonly JsonSerializerOptions _options;
+	public static readonly JsonSerializerOptions DefaultOptions;
 
 	// ReSharper disable once MemberCanBePrivate.Global
 	public static IEnumerable TestData => LoadTests();
@@ -39,14 +40,22 @@ public class JsonPatchTestSuite
 
 	static JsonPatchTestSuite()
 	{
-		_options = new JsonSerializerOptions(JsonPatchTestSerializerContext.Default.Options)
+#if NET8_0_OR_GREATER
+		DefaultOptions = new JsonSerializerOptions(JsonPatchTestSerializerContext.Default.Options);
+		DefaultOptions.TypeInfoResolverChain.Add(JsonPatch.JsonTypeResolver);
+#else
+		DefaultOptions = new();
+#endif
+
+		_options = new JsonSerializerOptions(
+#if NET8_0_OR_GREATER
+			DefaultOptions!
+#endif
+			)
 		{
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			WriteIndented = true,
 		};
-#if NET8_0_OR_GREATER
-		_options.TypeInfoResolverChain.Add(JsonPatch.JsonTypeResolver);
-#endif
 	}
 
 	[TestCaseSource(nameof(TestData))]

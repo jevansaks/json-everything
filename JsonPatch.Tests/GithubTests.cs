@@ -6,6 +6,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Json.More;
+using Json.Patch.Tests.Suite;
 using Json.Pointer;
 using NUnit.Framework;
 
@@ -24,7 +25,7 @@ public class GithubTests
 		var patchOperations = pathsToPatch.Select(path => PatchOperation.Replace(JsonPointer.Parse(path), maskJson));
 		var patchConfig = new JsonPatch(patchOperations);
 
-		Console.WriteLine(JsonSerializer.Serialize(patchConfig));
+		Console.WriteLine(JsonSerializer.Serialize(patchConfig, JsonPatchTestSuite.DefaultOptions));
 
 		const string singleObjectJson = "{" +
 										"\"_id\":\"640729d45434f90313d25c78\"," +
@@ -35,7 +36,7 @@ public class GithubTests
 
 		var singleObject = JsonDocument.Parse(singleObjectJson).RootElement;
 		var patchedSingleObject = patchConfig.Apply(singleObject.AsNode()).Result;
-		Console.WriteLine(JsonSerializer.Serialize(patchedSingleObject));
+		Console.WriteLine(JsonSerializer.Serialize(patchedSingleObject, JsonPatchTestSuite.DefaultOptions));
 
 		const string arrayObjectJson = "[" +
 									   "{" +
@@ -56,7 +57,7 @@ public class GithubTests
 		// Way 1: patch whole array
 		var patchedArray = patchConfig.Apply(arrayObject.AsNode()).Result; // <- does nothing
 
-		Console.WriteLine(JsonSerializer.Serialize(patchedArray));
+		Console.WriteLine(JsonSerializer.Serialize(patchedArray, JsonPatchTestSuite.DefaultOptions));
 	}
 
 	[Test]
@@ -79,7 +80,7 @@ public class GithubTests
 
 		var singleObject = JsonDocument.Parse(singleObjectJson).RootElement;
 		var patchedSingleObject = patchConfig.Apply(singleObject.AsNode()).Result;
-		Console.WriteLine(JsonSerializer.Serialize(patchedSingleObject));
+		Console.WriteLine(JsonSerializer.Serialize(patchedSingleObject, JsonPatchTestSuite.DefaultOptions));
 
 		const string arrayObjectJson = "[" +
 									   "{" +
@@ -103,7 +104,7 @@ public class GithubTests
 		foreach (var element in jsonArray)
 		{
 			var patchedNode = patchConfig.Apply(element).Result; // <-  throws an error
-			Console.WriteLine(JsonSerializer.Serialize(patchedNode));
+			Console.WriteLine(JsonSerializer.Serialize(patchedNode, JsonPatchTestSuite.DefaultOptions));
 		}
 	}
 
@@ -127,7 +128,7 @@ public class GithubTests
 
 		var singleObject = JsonNode.Parse(singleObjectJson);
 		var patchedSingleObject = patchConfig.Apply(singleObject).Result;
-		Console.WriteLine(JsonSerializer.Serialize(patchedSingleObject));
+		Console.WriteLine(JsonSerializer.Serialize(patchedSingleObject, JsonPatchTestSuite.DefaultOptions));
 
 		const string arrayObjectJson = "[" +
 									   "{" +
@@ -154,7 +155,7 @@ public class GithubTests
 			jsonArray.RemoveAt(currentIndex);
 
 			var patchedNode = patchConfig.Apply(nodeToPatch).Result; // <-  throws an error
-			Console.WriteLine(JsonSerializer.Serialize(patchedNode));
+			Console.WriteLine(JsonSerializer.Serialize(patchedNode, JsonPatchTestSuite.DefaultOptions));
 		}
 	}
 
@@ -177,7 +178,7 @@ public class GithubTests
 
 		var singleObject = JsonNode.Parse(singleObjectJson);
 		var result = patchConfig.Apply(singleObject);
-		Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
+		Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonPatchTestSuite.DefaultOptions) { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }));
 		Assert.IsNotNull(patchConfig.Apply(singleObject).Error);
 	}
 
@@ -190,7 +191,7 @@ public class GithubTests
 	public void Issue543_CreatePatchToAddItem()
 	{
 		var targetObj = new Target543 { Values = new List<int> { 1, 2, 3, 4 } };
-		var target = JsonSerializer.SerializeToNode(targetObj);
+		var target = JsonSerializer.SerializeToNode(targetObj, JsonPatchTestSuite.DefaultOptions);
 
 		var jsonPointer = JsonPointer.Create<Target543>(x => x.Values.Last());
 		var jsonPatch = new JsonPatch(PatchOperation.Add(jsonPointer, (JsonNode)42));

@@ -129,4 +129,5 @@ public class PatchJsonConverter : AotCompatibleJsonConverter<JsonPatch>
 [JsonSerializable(typeof(List<PatchOperation>))]
 [JsonSerializable(typeof(IReadOnlyList<PatchOperation>))]
 [JsonSerializable(typeof(PatchOperationJsonConverter.Model))]
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal partial class PatchSerializerContext : JsonSerializerContext;
