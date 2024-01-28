@@ -12,6 +12,12 @@ public class DevTest
 	{
 		var text = "null";
 
-		var rule = JsonSerializer.Deserialize<Rule>(text);
+		var rule = JsonSerializer.Deserialize<Rule>(text, 
+			new JsonSerializerOptions
+			{
+#if NET8_0_OR_GREATER
+				TypeInfoResolver = Rule.JsonTypeResolver
+#endif
+			});
 	}
 }

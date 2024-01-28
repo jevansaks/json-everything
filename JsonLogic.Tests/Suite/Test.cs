@@ -23,7 +23,10 @@ public class TestConverter : JsonConverter<Test?>
 		var node = JsonSerializer.Deserialize<JsonNode?>(ref reader, options);
 		if (node is not JsonArray arr) return null;
 
-		var logic = JsonSerializer.Serialize(arr[0], new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+		var logic = JsonSerializer.Serialize(arr[0], new JsonSerializerOptions(options)
+		{ 
+			Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping 
+		});
 		var data = arr[1];
 		var expected = arr[2];
 

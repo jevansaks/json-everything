@@ -2,11 +2,19 @@
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Json.More;
 using NUnit.Framework;
 
 namespace Json.Logic.Tests.Suite;
+
+[JsonSerializable(typeof(TestSuite))]
+[JsonSerializable(typeof(Test))]
+[JsonSerializable(typeof(List<Test>))]
+[JsonSerializable(typeof(JsonNode))]
+internal partial class LogicTestContext : JsonSerializerContext;
 
 public class MoreTests
 {
@@ -18,7 +26,7 @@ public class MoreTests
 
 			var content = await File.ReadAllTextAsync(testsPath);
 
-			var testSuite = JsonSerializer.Deserialize<TestSuite>(content);
+			var testSuite = JsonSerializer.Deserialize<TestSuite>(content, LogicTestContext.Default.Options);
 
 			return testSuite!.Tests.Select(t => new TestCaseData(t) { TestName = $"{t.Logic}  |  {t.Data.AsJsonString()}  |  {t.Expected.AsJsonString()}" });
 		}).Result;
@@ -27,7 +35,12 @@ public class MoreTests
 	[TestCaseSource(nameof(Suite))]
 	public void Run(Test test)
 	{
-		var rule = JsonSerializer.Deserialize<Rule>(test.Logic);
+		var rule = JsonSerializer.Deserialize<Rule>(test.Logic, new JsonSerializerOptions
+		{
+#if NET8_0_OR_GREATER
+			TypeInfoResolverChain = { LogicTestContext.Default, Rule.JsonTypeResolver }
+#endif
+		});
 
 		if (rule == null)
 		{

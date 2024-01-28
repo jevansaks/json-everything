@@ -39,7 +39,7 @@ public class SuiteRunner
 			}
 
 
-			var testSuite = JsonSerializer.Deserialize<TestSuite>(content);
+			var testSuite = JsonSerializer.Deserialize<TestSuite>(content, LogicTestContext.Default.Options);
 
 			return testSuite!.Tests.Select(t => new TestCaseData(t) { TestName = $"{t.Logic}  |  {t.Data.AsJsonString()}  |  {t.Expected.AsJsonString()}" });
 		}).Result;
@@ -48,7 +48,12 @@ public class SuiteRunner
 	[TestCaseSource(nameof(Suite))]
 	public void Run(Test test)
 	{
-		var rule = JsonSerializer.Deserialize<Rule>(test.Logic);
+		var rule = JsonSerializer.Deserialize<Rule>(test.Logic, new JsonSerializerOptions
+		{
+#if NET8_0_OR_GREATER
+			TypeInfoResolverChain = { LogicTestContext.Default, Rule.JsonTypeResolver }
+#endif
+		});
 
 		if (rule == null)
 		{
@@ -63,7 +68,10 @@ public class SuiteRunner
 		new()
 		{
 			Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-			Converters = { new LogicComponentConverter { SaveSource = false } }
+			Converters = { new LogicComponentConverter { SaveSource = false } },
+#if NET8_0_OR_GREATER
+			TypeInfoResolverChain = { LogicTestContext.Default, Rule.JsonTypeResolver }
+#endif
 		};
 
 	[TestCaseSource(nameof(Suite))]
@@ -72,7 +80,7 @@ public class SuiteRunner
 		var node = JsonNode.Parse(test.Logic);
 		var rule = JsonSerializer.Deserialize<Rule>(test.Logic, _spellingTestSerializerOptions);
 
-		var serialized = JsonSerializer.SerializeToNode(rule);
+		var serialized = JsonSerializer.SerializeToNode(rule, _spellingTestSerializerOptions);
 
 		if (node.IsEquivalentTo(serialized)) return;
 
