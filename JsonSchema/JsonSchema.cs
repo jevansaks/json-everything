@@ -94,7 +94,7 @@ public class JsonSchema : IBaseDocument
 	/// A TypeInfoResolver that can be used for serializing JsonSchema objects. Add to your custom
 	/// JsonSerializerOptions's TypeInfoResolver or TypeInfoResolveChain.
 	/// </summary>
-	public static IJsonTypeInfoResolver TypeInfoResolver => JsonSchemaSerializerContext.OptionsManager.TypeInfoResolver;
+	public static IJsonTypeInfoResolver TypeInfoResolver => JsonSchemaSerializerContext.Default;
 
 	private JsonSchema(bool value)
 	{
@@ -170,11 +170,9 @@ public class JsonSchema : IBaseDocument
 	/// <param name="jsonText">The text to parse.</param>
 	/// <returns>A new <see cref="JsonSchema"/>.</returns>
 	/// <exception cref="JsonException">Could not deserialize a portion of the schema.</exception>
-	[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "We guarantee that the SerializerOptions covers all the types we need for AOT scenarios.")]
-	[UnconditionalSuppressMessage("AOT", "IL3050:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "We guarantee that the SerializerOptions covers all the types we need for AOT scenarios.")]
 	public static JsonSchema FromText(string jsonText)
 	{
-		return JsonSerializer.Deserialize<JsonSchema>(jsonText, JsonSchemaSerializerContext.OptionsManager.SerializerOptions)!;
+		return JsonSerializer.Deserialize<JsonSchema>(jsonText, JsonSchemaSerializerContext.Default.JsonSchema)!;
 	}
 
 	/// <summary>
@@ -446,7 +444,7 @@ public class JsonSchema : IBaseDocument
 
 			foreach (var keyword in unrecognizedButSupported)
 			{
-				var jsonText = JsonSerializer.Serialize((object) keyword, keyword.GetType(), JsonSchemaSerializerContext.OptionsManager.SerializerOptions);
+				var jsonText = JsonSerializer.Serialize((object) keyword, keyword.GetType(), JsonSchemaSerializerContext.Default.Options);
 				var json = JsonNode.Parse(jsonText);
 				var keywordConstraint = KeywordConstraint.SimpleAnnotation(keyword.Keyword(), json);
 				localConstraints.Add(keywordConstraint);
@@ -668,7 +666,7 @@ public class JsonSchema : IBaseDocument
 					newResolvable = k;
 					break;
 				default: // non-applicator keyword
-					var serialized = JsonSerializer.Serialize(localResolvable, localResolvable.GetType(), JsonSchemaSerializerContext.OptionsManager.SerializerOptions);
+					var serialized = JsonSerializer.Serialize(localResolvable, localResolvable.GetType(), JsonSchemaSerializerContext.Default.Options);
 					var json = JsonNode.Parse(serialized);
 					var newPointer = JsonPointer.Create(pointer.Segments.Skip(i));
 					i += newPointer.Segments.Length - 1;

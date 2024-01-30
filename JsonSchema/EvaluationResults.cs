@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+using JetBrains.Annotations;
 using Json.More;
 using Json.Pointer;
 
@@ -291,7 +293,22 @@ public class EvaluationResults
 	/// <param name="keyword">The keyword that failed validation.</param>
 	/// <param name="message">The error message.</param>
 	/// <param name="parameters">Parameters to replace in the message.</param>
+	[RequiresDynamicCode("Calls JsonSerializer.Serialize and might require reflection for token values serialization. Prefer ReplaceTokens that takes TypeInfo parameters for AOT scenarios.")]
+	[RequiresUnreferencedCode("Calls JsonSerializer.Serialize and might require reflection for token values serialization. Prefer ReplaceTokens that takes TypeInfo parameters for AOT scenarios.")]
 	public void Fail(string keyword, string message, params (string token, object? value)[] parameters)
+	{
+		IsValid = false;
+		_errors ??= new();
+		_errors[keyword] = message.ReplaceTokens(parameters);
+	}
+
+	/// <summary>
+	/// Marks the result as invalid.
+	/// </summary>
+	/// <param name="keyword">The keyword that failed validation.</param>
+	/// <param name="message">The error message.</param>
+	/// <param name="parameters">Parameters to replace in the message.</param>
+	public void Fail(string keyword, string message, params (string token, object? value, JsonTypeInfo typeInfo)[] parameters)
 	{
 		IsValid = false;
 		_errors ??= new();
@@ -304,6 +321,13 @@ public class EvaluationResults
 		_details.Add(results);
 		results.Parent = this;
 	}
+}
+
+public class EvaluationResultParameter
+{
+
+
+	//public static implicit
 }
 
 internal class EvaluationResultsJsonConverter : Json.More.AotCompatibleJsonConverter<EvaluationResults>

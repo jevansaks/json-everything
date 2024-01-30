@@ -74,11 +74,7 @@ public class ValidationOptimized
 											  shortFileName != "uri-template";
 
 			var contents = File.ReadAllText(fileName);
-			var collections = JsonSerializer.Deserialize<List<TestCollection>>(contents, new JsonSerializerOptions
-			{
-				TypeInfoResolverChain = { TestSerializerContext.Default, JsonSchema.TypeInfoResolver },
-				PropertyNameCaseInsensitive = true
-			});
+			var collections = JsonSerializer.Deserialize<List<TestCollection>>(contents, TestSerializerContext.DefaultCaseInsensitive.ListTestCollection);
 
 			foreach (var collection in collections!)
 			{

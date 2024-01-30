@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -9,6 +10,92 @@ namespace Json.More;
 /// Manages a <see cref="JsonSerializer"/> object that incorporates the type resolvers
 /// found in a <see cref="JsonSerializerContext"/>.
 /// </summary>
+public class TypeResolverOptionsManager<T>
+{
+	private readonly JsonSerializerOptions _baseOptions;
+	private JsonSerializerOptions? _serializerOptions;
+	private Func<IEnumerable<IJsonTypeInfoResolver>> _getTypeInfoResolvers;
+	private readonly object _serializerOptionsLock = new();
+
+	private T? _default;
+	private Func<JsonSerializerOptions, T> _creator;
+
+	/// <summary>
+	/// Returns a <typeparamref name="T"/> combined with other TypeInfoResolvers.
+	/// </summary>
+	public T Default
+	{
+		get
+		{
+			lock (_serializerOptionsLock)
+			{
+				_default ??= _creator(SerializerOptions);
+				return _default!;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Rebuilds the Context with a new set of resolvers.
+	/// </summary>
+	/// <remarks>
+	/// This should be built with the same set of resolvers that the options manager was
+	/// created with, except for the base resolver.
+	/// </remarks>
+	public void NotifyTypeInfoResolverChanged()
+	{
+		lock (_serializerOptionsLock)
+		{
+			_serializerOptions = null;
+			_default = default(T);
+		}
+
+		TypeInfoResolverUpdated?.Invoke(this, EventArgs.Empty);
+	}
+
+	/// <summary>
+	/// Raised when the type info resolver is updated.  (See <see cref="NotifyTypeInfoResolverChanged"/>)
+	/// </summary>
+	public event EventHandler? TypeInfoResolverUpdated;
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="contextCreator"></param>
+	/// <param name="getResolvers"></param>
+	/// <param name="baseOptions"></param>
+	public TypeResolverOptionsManager(Func<JsonSerializerOptions, T> contextCreator, Func<IEnumerable<IJsonTypeInfoResolver>> getResolvers, JsonSerializerOptions? baseOptions = null)
+	{
+		_creator = contextCreator;
+		_baseOptions = baseOptions ?? new JsonSerializerOptions();
+		_getTypeInfoResolvers = getResolvers;
+	}
+
+	/// <summary>
+	/// Gets the serializer options.
+	/// </summary>
+	private JsonSerializerOptions SerializerOptions
+	{
+		get
+		{
+			lock (_serializerOptionsLock)
+			{
+				if (_serializerOptions == null)
+				{
+					_serializerOptions = new JsonSerializerOptions(_baseOptions);
+					foreach (var resolver in _getTypeInfoResolvers())
+					{
+						_serializerOptions.TypeInfoResolverChain.Add(resolver);
+					}
+				}
+
+				return _serializerOptions!;
+			}
+		}
+	}
+}
+
+
 public class TypeResolverOptionsManager
 {
 	private readonly JsonSerializerOptions _baseOptions;
@@ -16,7 +103,7 @@ public class TypeResolverOptionsManager
 	private readonly IJsonTypeInfoResolver _baseResolver;
 	private IJsonTypeInfoResolver _typeInfoResolver;
 	private readonly object _serializerOptionsLock = new();
-	
+
 	/// <summary>
 	/// Gets the serializer options.
 	/// </summary>
@@ -45,7 +132,7 @@ public class TypeResolverOptionsManager
 	/// Raised when the type info resolver is updated.  (See <see cref="RebuildTypeResolver"/>)
 	/// </summary>
 	public event EventHandler? TypeInfoResolverUpdated;
-	
+
 	/// <summary>
 	/// Creates a new instance of the <see cref="TypeResolverOptionsManager"/> class.
 	/// </summary>

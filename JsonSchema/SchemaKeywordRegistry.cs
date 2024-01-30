@@ -143,7 +143,7 @@ public static class SchemaKeywordRegistry
 		_keywords[keyword.Name] = typeof(T);
 		_externalKeywordTypeInfoResolvers[typeof(T)] = typeContext;
 
-		JsonSchemaSerializerContext.OptionsManager.RebuildTypeResolver(ExternalTypeInfoResolvers);
+		JsonSchemaSerializerContext.ContextManager.NotifyTypeInfoResolverChanged();
 	}
 
 	/// <summary>

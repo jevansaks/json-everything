@@ -228,15 +228,16 @@ internal class ArgumentCollectionConverter : JsonConverter<ArgumentCollection>
 [JsonSerializable(typeof(decimal))]
 [JsonSerializable(typeof(bool))]
 [JsonSerializable(typeof(string))]
-internal partial class LogicSerializerContext : JsonSerializerContext
+internal partial class LogicSerializerContextBase : JsonSerializerContext
 {
-	public static TypeResolverOptionsManager OptionsManager { get; }
+}
 
-	static LogicSerializerContext()
-	{
-		OptionsManager = new TypeResolverOptionsManager(
-			Default,
-			RuleRegistry.ExternalTypeInfoResolvers
+internal class LogicSerializerContext : LogicSerializerContextBase
+{
+	new public static LogicSerializerContextBase Default => ContextManager.Default;
+
+	public static TypeResolverOptionsManager<LogicSerializerContextBase> ContextManager = new(
+		(JsonSerializerOptions options) => new LogicSerializerContextBase(options),
+		() => RuleRegistry.ExternalTypeInfoResolvers
 		);
-	}
 }

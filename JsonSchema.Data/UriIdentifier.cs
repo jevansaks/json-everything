@@ -70,7 +70,7 @@ public class UriIdentifier : IDataResourceIdentifier
 			}
 
 			var rootSchema = (JsonSchema?) registry.Get(root.SchemaLocation);
-			data = JsonSerializer.SerializeToNode(rootSchema, DataGenerationSerializerContext.OptionsManager.SerializerOptions);
+			data = JsonSerializer.SerializeToNode(rootSchema, DataGenerationSerializerContext.Default.JsonSchema!);
 		}
 
 		if (!string.IsNullOrEmpty(fragment))
@@ -113,15 +113,14 @@ public class UriIdentifier : IDataResourceIdentifier
 }
 
 [JsonSerializable(typeof(JsonSchema))]
-internal partial class DataGenerationSerializerContext : JsonSerializerContext
-{
-	public static TypeResolverOptionsManager OptionsManager { get; }
+internal partial class DataGenerationSerializerContextBase : JsonSerializerContext;
 
-	static DataGenerationSerializerContext()
-	{
-		OptionsManager = new(
-			Default,
-			Json.Schema.JsonSchema.TypeInfoResolver
+internal class DataGenerationSerializerContext : DataGenerationSerializerContextBase
+{
+	new public static DataGenerationSerializerContextBase Default => ContextManager.Default;
+
+	public static TypeResolverOptionsManager<DataGenerationSerializerContextBase> ContextManager = new(
+		(JsonSerializerOptions options) => new DataGenerationSerializerContextBase(options),
+		() => [Json.Schema.JsonSchema.TypeInfoResolver]
 		);
-	}
 }

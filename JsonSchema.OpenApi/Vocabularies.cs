@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Json.More;
@@ -34,11 +35,11 @@ public static class Vocabularies
 		schemaRegistry ??= SchemaRegistry.Global;
 
 		vocabRegistry.Register(OpenApi);
-		SchemaKeywordRegistry.Register<ExampleKeyword>(OpenApiSerializerContext.Default);
+		SchemaKeywordRegistry.Register<ExampleKeyword>(OpenApiSerializerContextBase.Default);
 		SchemaKeywordRegistry.RegisterNullValue(new ExampleKeyword(null));
-		SchemaKeywordRegistry.Register<DiscriminatorKeyword>(OpenApiSerializerContext.Default);
-		SchemaKeywordRegistry.Register<ExternalDocsKeyword>(OpenApiSerializerContext.Default);
-		SchemaKeywordRegistry.Register<XmlKeyword>(OpenApiSerializerContext.Default);
+		SchemaKeywordRegistry.Register<DiscriminatorKeyword>(OpenApiSerializerContextBase.Default);
+		SchemaKeywordRegistry.Register<ExternalDocsKeyword>(OpenApiSerializerContextBase.Default);
+		SchemaKeywordRegistry.Register<XmlKeyword>(OpenApiSerializerContextBase.Default);
 		schemaRegistry.Register(MetaSchemas.OpenApiMeta);
 	}
 }
@@ -52,15 +53,14 @@ public static class Vocabularies
 [JsonSerializable(typeof(XmlKeywordJsonConverter.Model), TypeInfoPropertyName = "XmlModel")]
 [JsonSerializable(typeof(JsonNode))]
 [JsonSerializable(typeof(IReadOnlyDictionary<string, string>))]
-internal partial class OpenApiSerializerContext : JsonSerializerContext
-{
-	public static TypeResolverOptionsManager OptionsManager { get; }
+internal partial class OpenApiSerializerContextBase : JsonSerializerContext;
 
-	static OpenApiSerializerContext()
-	{
-		OptionsManager = new(
-			Default,
-			JsonSchema.TypeInfoResolver
+internal class OpenApiSerializerContext : OpenApiSerializerContextBase
+{
+	new public static OpenApiSerializerContextBase Default => ContextManager.Default;
+
+	public static TypeResolverOptionsManager<OpenApiSerializerContextBase> ContextManager = new(
+		(JsonSerializerOptions options) => new OpenApiSerializerContextBase(options),
+		() => [JsonSchema.TypeInfoResolver]
 		);
-	}
 }
