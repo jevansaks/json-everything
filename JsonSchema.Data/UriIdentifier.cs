@@ -68,7 +68,7 @@ public class UriIdentifier : IDataResourceIdentifier
 			}
 
 			var rootSchema = (JsonSchema?) registry.Get(root.SchemaLocation);
-			data = JsonSerializer.SerializeToNode(rootSchema, DataExtSerializerContext.OptionsManager.SerializerOptions);
+			data = JsonSerializer.SerializeToNode(rootSchema, DataGenerationSerializerContext.Default.JsonSchema!);
 		}
 
 		if (!string.IsNullOrEmpty(fragment))
@@ -108,4 +108,17 @@ public class UriIdentifier : IDataResourceIdentifier
 	{
 		return Target.ToString();
 	}
+}
+
+[JsonSerializable(typeof(JsonSchema))]
+internal partial class DataGenerationSerializerContextBase : JsonSerializerContext;
+
+internal class DataGenerationSerializerContext : DataGenerationSerializerContextBase
+{
+	new public static DataGenerationSerializerContextBase Default => ContextManager.Default;
+
+	public static TypeResolverOptionsManager<DataGenerationSerializerContextBase> ContextManager = new(
+		(JsonSerializerOptions options) => new DataGenerationSerializerContextBase(options),
+		() => [Json.Schema.JsonSchema.TypeInfoResolver]
+		);
 }

@@ -82,8 +82,6 @@ public class DataKeyword : IJsonSchemaKeyword
 		return new KeywordConstraint(Name, Evaluator);
 	}
 
-	[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "We guarantee that the SerializerOptions covers all the types we need for AOT scenarios.")]
-	[UnconditionalSuppressMessage("AOT", "IL3050:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "We guarantee that the SerializerOptions covers all the types we need for AOT scenarios.")]
 	private void Evaluator(KeywordEvaluation evaluation, EvaluationContext context)
 	{
 		var data = new Dictionary<string, JsonNode>();
@@ -99,8 +97,8 @@ public class DataKeyword : IJsonSchemaKeyword
 		if (failedReferences.Count != 0)
 			throw new RefResolutionException(failedReferences.Select(x => x.ToString())!);
 
-		var json = JsonSerializer.Serialize(data, DataExtSerializerContext.OptionsManager.SerializerOptions);
-		var subschema = JsonSerializer.Deserialize<JsonSchema>(json, DataExtSerializerContext.OptionsManager.SerializerOptions)!;
+		var json = JsonSerializer.Serialize(data, DataExtSerializerContext.Default.DictionaryStringJsonNode);
+		var subschema = JsonSerializer.Deserialize<JsonSchema>(json, DataExtSerializerContext.Default.JsonSchema)!;
 
 		var schemaEvaluation = subschema
 			.GetConstraint(JsonPointer.Create(Name), evaluation.Results.InstanceLocation, evaluation.Results.InstanceLocation, context)

@@ -8,10 +8,7 @@ namespace Json.Schema.Tests;
 [SetUpFixture]
 public class TestEnvironment
 {
-	public static readonly JsonSerializerOptions SerializerOptions = new()
-	{
-		TypeInfoResolverChain = { TestSerializerContext.Default, JsonSchema.TypeInfoResolver },
-	};
+	public static JsonSerializerOptions SerializerOptions = TestSerializerContext.Default.Options;
 
 	public static readonly JsonSerializerOptions SerializerOptionsUnsafeRelaxedEscaping = new(SerializerOptions)
 	{

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Json.More;
@@ -31,7 +32,7 @@ public static class Vocabularies
 		schemaRegistry ??= SchemaRegistry.Global;
 
 		vocabRegistry.Register(Data);
-		SchemaKeywordRegistry.Register<DataKeyword>(DataExtSerializerContext.Default);
+		SchemaKeywordRegistry.Register<DataKeyword>(DataExtSerializerContextBase.Default);
 		schemaRegistry.Register(MetaSchemas.Data);
 		schemaRegistry.Register(MetaSchemas.Data_202012);
 	}
@@ -44,14 +45,15 @@ public static class Vocabularies
 [JsonSerializable(typeof(JsonPointer))]
 [JsonSerializable(typeof(RelativeJsonPointer))]
 [JsonSerializable(typeof(Uri))]
-internal partial class DataExtSerializerContext : JsonSerializerContext
-{
-	public static TypeResolverOptionsManager OptionsManager { get; }
+[JsonSerializable(typeof(JsonSchema))]
+internal partial class DataExtSerializerContextBase : JsonSerializerContext;
 
-	static DataExtSerializerContext() {
-		OptionsManager = new(
-			Default,
-			JsonSchema.TypeInfoResolver
+internal class DataExtSerializerContext : DataExtSerializerContextBase
+{
+	new public static DataExtSerializerContextBase Default => ContextManager.Default;
+
+	public static TypeResolverOptionsManager<DataExtSerializerContextBase> ContextManager = new(
+		(JsonSerializerOptions options) => new DataExtSerializerContextBase(options),
+		() => [Json.Schema.JsonSchema.TypeInfoResolver]
 		);
-	}
 }

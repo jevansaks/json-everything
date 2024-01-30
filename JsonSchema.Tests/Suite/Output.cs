@@ -206,4 +206,22 @@ public class Output
 [JsonSerializable(typeof(System.Drawing.Point))]
 [JsonSerializable(typeof(DeserializationTests.Foo))]
 [JsonSerializable(typeof(DeserializationTests.FooWithSchema))]
-internal partial class TestSerializerContext : JsonSerializerContext;
+internal partial class TestSerializerContextBase : JsonSerializerContext;
+
+internal class TestSerializerContext : TestSerializerContextBase
+{
+	new public static TestSerializerContextBase Default => _contextManager.Default;
+
+	private static TypeResolverOptionsManager<TestSerializerContextBase> _contextManager = new(
+		(JsonSerializerOptions options) => new TestSerializerContextBase(options),
+		() => [Json.Schema.JsonSchema.TypeInfoResolver]
+		);
+
+	public static TestSerializerContextBase DefaultCaseInsensitive => _caseInsensitiveContextManager.Default;
+
+	private static TypeResolverOptionsManager<TestSerializerContextBase> _caseInsensitiveContextManager = new(
+		(JsonSerializerOptions options) => new TestSerializerContextBase(options),
+		() => [Json.Schema.JsonSchema.TypeInfoResolver],
+		new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+		);
+}
