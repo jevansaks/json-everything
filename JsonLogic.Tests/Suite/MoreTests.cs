@@ -27,7 +27,7 @@ public class MoreTests
 	[TestCaseSource(nameof(Suite))]
 	public void Run(Test test)
 	{
-		var rule = JsonSerializer.Deserialize<Rule>(test.Logic, TestSerializerContext.OptionsManager.SerializerOptions);
+		var rule = JsonSerializer.Deserialize<Rule>(test.Logic, TestSerializerContext.Default.Rule);
 
 		if (rule == null)
 		{

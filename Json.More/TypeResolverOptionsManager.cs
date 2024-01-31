@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -10,7 +12,7 @@ namespace Json.More;
 /// Manages a <see cref="JsonSerializer"/> object that incorporates the type resolvers
 /// found in a <see cref="JsonSerializerContext"/>.
 /// </summary>
-public class TypeResolverOptionsManager<T>
+public class TypeResolverOptionsManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.NonPublicMethods)] T>
 {
 	private readonly JsonSerializerOptions _baseOptions;
 	private JsonSerializerOptions? _serializerOptions;
@@ -19,6 +21,9 @@ public class TypeResolverOptionsManager<T>
 
 	private T? _default;
 	private Func<JsonSerializerOptions, T> _creator;
+
+	static readonly ExplicitBaseInterfaceInvoker<T> _invoker = new("global::System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver.GetTypeInfo");
+
 
 	/// <summary>
 	/// Returns a <typeparamref name="T"/> combined with other TypeInfoResolvers.
@@ -93,9 +98,57 @@ public class TypeResolverOptionsManager<T>
 			}
 		}
 	}
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="target"></param>
+	/// <param name="type"></param>
+	/// <param name="options"></param>
+	/// <returns></returns>
+	public JsonTypeInfo? GetTypeInfoImpl(T target, Type type, JsonSerializerOptions options)
+	{
+		// Call the base
+		var typeInfo = _invoker.Invoke(target, type, options);
+
+		// Then call chained TypeInfoResolvers
+		if (typeInfo == null)
+		{
+			// TODO:
+			foreach (var resolver in _getTypeInfoResolvers())
+			{
+				typeInfo = resolver.GetTypeInfo(type, options);
+				if (typeInfo != null)
+				{
+					break;
+				}
+			}
+		}
+		return typeInfo;
+	}
+}
+
+internal class ExplicitBaseInterfaceInvoker<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.NonPublicMethods)] T>
+{
+	private MethodInfo _method;
+
+	public ExplicitBaseInterfaceInvoker(string methodName)
+	{
+		_method = typeof(T).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+		if (_method == null) throw new InvalidOperationException("Could not find GetTypeInfo on base class");
+	}
+
+	public JsonTypeInfo? Invoke(T obj, params object[] parameters)
+	{
+		return (JsonTypeInfo?)_method.Invoke(obj, parameters);
+	}
 }
 
 
+/// <summary>
+/// 
+/// </summary>
 public class TypeResolverOptionsManager
 {
 	private readonly JsonSerializerOptions _baseOptions;

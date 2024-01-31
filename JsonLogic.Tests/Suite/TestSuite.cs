@@ -40,6 +40,7 @@ public class TestSuiteConverter : JsonConverter<TestSuite?>
 [JsonSerializable(typeof(Test[]))]
 [JsonSerializable(typeof(JsonNode))]
 [JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(Rule))]
 internal partial class TestSerializerContext : JsonSerializerContext
 {
 	public static TypeResolverOptionsManager OptionsManager { get; }
@@ -48,7 +49,7 @@ internal partial class TestSerializerContext : JsonSerializerContext
 	{
 		OptionsManager = new TypeResolverOptionsManager(
 			Default,
-			[Rule.JsonTypeResolver, ..RuleRegistry.ExternalTypeInfoResolvers]
+			[Json.Logic.Rule.JsonTypeResolver]
 		);
 	}
 }

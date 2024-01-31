@@ -6,6 +6,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 using Json.Schema.Tests.Serialization;
 using NUnit.Framework;
@@ -80,11 +81,7 @@ public class Output
 											  shortFileName != "uri-template";
 
 			var contents = File.ReadAllText(fileName);
-			var serializerOptions = new JsonSerializerOptions(TestEnvironment.SerializerOptions)
-			{
-				PropertyNameCaseInsensitive = true
-			};
-			var collections = JsonSerializer.Deserialize<List<TestCollection>>(contents, serializerOptions);
+			var collections = JsonSerializer.Deserialize(contents, TestSerializerContext.DefaultCaseInsensitive.ListTestCollection);
 
 			foreach (var collection in collections!)
 			{
@@ -208,19 +205,21 @@ public class Output
 [JsonSerializable(typeof(DeserializationTests.FooWithSchema))]
 internal partial class TestSerializerContextBase : JsonSerializerContext;
 
-internal class TestSerializerContext : TestSerializerContextBase
+internal class TestSerializerContext(JsonSerializerOptions options) : TestSerializerContextBase(options), IJsonTypeInfoResolver
 {
-	new public static TestSerializerContextBase Default => _contextManager.Default;
+	JsonTypeInfo? IJsonTypeInfoResolver.GetTypeInfo(Type type, JsonSerializerOptions options) => _contextManager.GetTypeInfoImpl(this, type, options);
 
-	private static TypeResolverOptionsManager<TestSerializerContextBase> _contextManager = new(
-		(JsonSerializerOptions options) => new TestSerializerContextBase(options),
+	new public static TestSerializerContext Default => _contextManager.Default;
+
+	private static TypeResolverOptionsManager<TestSerializerContext> _contextManager = new(
+		(JsonSerializerOptions options) => new TestSerializerContext(options),
 		() => [Json.Schema.JsonSchema.TypeInfoResolver]
 		);
 
-	public static TestSerializerContextBase DefaultCaseInsensitive => _caseInsensitiveContextManager.Default;
+	public static TestSerializerContext DefaultCaseInsensitive => _caseInsensitiveContextManager.Default;
 
-	private static TypeResolverOptionsManager<TestSerializerContextBase> _caseInsensitiveContextManager = new(
-		(JsonSerializerOptions options) => new TestSerializerContextBase(options),
+	private static TypeResolverOptionsManager<TestSerializerContext> _caseInsensitiveContextManager = new(
+		(JsonSerializerOptions options) => new TestSerializerContext(options),
 		() => [Json.Schema.JsonSchema.TypeInfoResolver],
 		new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
 		);
