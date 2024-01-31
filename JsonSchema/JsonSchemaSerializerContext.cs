@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Json.More;
 using Json.Pointer;
 
@@ -100,12 +103,72 @@ namespace Json.Schema;
 [JsonSerializable(typeof(Uri))]
 internal partial class JsonSchemaSerializerContextBase : JsonSerializerContext;
 
-internal class JsonSchemaSerializerContext : JsonSchemaSerializerContextBase
+internal class JsonSchemaSerializerContext : JsonSchemaSerializerContextBase, IJsonTypeInfoResolver
 {
-	new public static JsonSchemaSerializerContextBase Default => ContextManager.Default;
+	new public static JsonSchemaSerializerContext Default => ContextManager.Default;
 
-	public static TypeResolverOptionsManager<JsonSchemaSerializerContextBase> ContextManager = new(
-		(JsonSerializerOptions options) => new JsonSchemaSerializerContextBase(options),
-		() => SchemaKeywordRegistry.ExternalTypeInfoResolvers
+	ExplicitInterfaceInvoker<JsonSchemaSerializerContextBase> _invoker = new("global::System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver.GetTypeInfo");
+
+	JsonTypeInfo? IJsonTypeInfoResolver.GetTypeInfo(Type type, JsonSerializerOptions options)
+	{
+		var typeInfo = _invoker.Invoke<JsonTypeInfo?>(this, type, options);
+		if (typeInfo == null)
+		{
+			foreach (var resolver in SchemaKeywordRegistry.ExternalTypeInfoResolvers)
+			{
+				typeInfo = resolver.GetTypeInfo(type, options);
+				if (typeInfo != null)
+				{
+					break;
+				}
+			}
+		}
+		return typeInfo;
+	}
+
+	public JsonSchemaSerializerContext(JsonSerializerOptions options) : base(options)
+	{
+	}
+
+	public static TypeResolverOptionsManager<JsonSchemaSerializerContext> ContextManager = new(
+		(JsonSerializerOptions options) => new JsonSchemaSerializerContext(options),
+		() => []//SchemaKeywordRegistry.ExternalTypeInfoResolvers
 		);
 }
+
+internal class ExplicitInterfaceInvoker<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.NonPublicMethods)] T>
+{
+	private MethodInfo _method;
+	private string _methodName;
+
+	public ExplicitInterfaceInvoker(string methodName)
+	{
+		_methodName = methodName;
+		var methods = typeof(T).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+		foreach (var methodInfo in methods)
+		{
+			if (methodInfo.IsFinal && methodInfo.IsPrivate) //explicit interface implementation
+			{
+				if (methodInfo.Name == methodName)
+				{
+					_method = methodInfo;
+					break;
+				}
+			}
+		}
+
+		if (_method == null) throw new InvalidOperationException("Could not find GetTypeInfo on base class");
+	}
+
+	public T2 Invoke<T2>(T obj, params object[] parameters)
+	{
+		if (_method.Invoke(obj, parameters) is T2 value)
+		{
+			return value;
+		}
+
+		throw new InvalidOperationException("Method did not return expected type");
+	}
+
+}   //public static class BaseClassExplicitInterfaceInvoker<T>
